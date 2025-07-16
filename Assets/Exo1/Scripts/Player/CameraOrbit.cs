@@ -42,7 +42,6 @@ public class CameraOrbit : MonoBehaviour
         Vector2 vector = Value.Get<Vector2>();
         mouseX = vector.x;
         mouseY = vector.y;
-        Debug.Log(mouseX+" / "+ mouseY);
     }
 
     private void MoveCamera()
@@ -82,10 +81,6 @@ public class CameraOrbit : MonoBehaviour
 
     public void PlayerMoveInCameraDirection()
     {
-     /*   Vector3 targetPosition = new Vector3(playerTransform.position.x,
-            aimingObject.position.y,
-            playerTransform.position.x);
-      */
         playerTransform.LookAt(aimingObject);
     }
 }

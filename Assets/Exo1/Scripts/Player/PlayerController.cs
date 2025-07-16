@@ -1,13 +1,16 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 
 public class PlayerController : MonoBehaviour
 {
+    public bool IsInteracting;
+    [SerializeField] private bool CanWalk = false;
     [SerializeField] private bool isOnGround = false;
     [SerializeField] private bool isJumping = false;
     [SerializeField] private bool isDoubleJump = false;
@@ -17,20 +20,24 @@ public class PlayerController : MonoBehaviour
     [Range(.3f, .6f)]
     [SerializeField] private float detectionRange = 0;
     [SerializeField] private LayerMask groundLayer;
-    [SerializeField] private Rigidbody rigidBody;
+    [SerializeField] public Rigidbody rigidBody;
     [SerializeField] private bool isSprinting = false;
+    public bool Dodging = false;
     [Range(1f, 2f)]
     [SerializeField] private float sprintMulti = 1.5f;
-    [Range(5f, 20f)]
+    [Range(1f, 50f)]
     [SerializeField] private float speed = 10;
    
     [Range(100f, 500f)]
     [SerializeField] private float jumpForce = 10;
-    [SerializeField] private float movementX;
-    [SerializeField] private float movementZ;
+    [SerializeField] private float movementHorizontal;
+    [SerializeField] private float movementVertical;
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CameraOrbit cameraOrbit;
-
+    [SerializeField]
+    AnimatorManager animatorManager;
+    public bool UsingRootMotion = false;
+  
     private void Start()
     {
         rigidBody = GetComponent<Rigidbody>();
@@ -38,13 +45,17 @@ public class PlayerController : MonoBehaviour
     }
 
     private void FixedUpdate()
-    {          
-        MovePlayer();        
+    {   
+        MovePlayer();
+        IsInteracting = animatorManager.animator.GetBool("IsInteracting");
     }
     
     bool IsGrounded()
     {
-        return isOnGround = Physics.CheckSphere(groundCheck.position, detectionRange, groundLayer);
+        isOnGround = false;
+        isOnGround = Physics.CheckSphere(groundCheck.position, detectionRange, groundLayer);
+
+        return isOnGround;
     }
 
     // Visualiser la zone de détection du sol dans l'éditeur
@@ -61,26 +72,37 @@ public class PlayerController : MonoBehaviour
     {
         Vector2 movementVector = movementValue.Get<Vector2>();
 
-        movementX = movementVector.x;
-        movementZ = movementVector.y;
+        movementHorizontal = movementVector.x;
+        movementVertical = movementVector.y;
     }
 
     void MovePlayer()
     {
+        if (IsInteracting)
+            return;
+
+        if (IsGrounded())
+        {
+            isJumping = false;
+        }
+
+
         float sprintValue = 1;
         if (isSprinting) sprintValue = sprintMulti;
         else sprintValue = 1;
 
-        if (movementX != 0 || movementZ != 0)        
+        if (movementHorizontal != 0 || movementVertical != 0)        
             CameraDirectionToPlayer();
 
-        Vector3 movement = new Vector3(movementX, 0.0f, movementZ);
+        Vector3 movement = new Vector3(movementHorizontal, 0.0f, movementVertical);
 
         float moveSpeed = speed;
         if (!isJumping && isSprinting) moveSpeed = speed * sprintValue;
         else if (isJumping) moveSpeed = speed * .5f;
-
+        
         transform.Translate(movement * (Time.deltaTime * moveSpeed));
+      
+        if (!isJumping) animatorManager.UpdateAnimatorValues(movementHorizontal, movementVertical, isSprinting, !isSprinting);
     }
 
     void CameraDirectionToPlayer()
@@ -94,7 +116,7 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded)
         {
-            isJumping = false;
+    //        isJumping = false;
         }
 
         float val = value.Get<float>();
@@ -116,6 +138,8 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    
+
     void InvokeCanDoubleJump()
     {
         CanDoubleJump = true;
@@ -124,6 +148,21 @@ public class PlayerController : MonoBehaviour
     void DoJump()
     {
         rigidBody.AddForce(Vector3.up * jumpForce);
+        if (movementHorizontal == 0 && movementVertical == 0) SendJumpToAnimator();
+        else SendRunJumpToAnimator();
+    }
+
+    void SendRunJumpToAnimator()
+    {
+        animatorManager.animator.SetBool("Jumping", true);
+        animatorManager.PlayTargetAnimation("Jump_Run", false);
+    }
+
+    void SendJumpToAnimator()
+    {
+        CanWalk = false;
+        animatorManager.animator.SetBool("Jumping", true);
+        animatorManager.PlayTargetAnimation("Jump_Run", false, false);
     }
 
     void OnSprint(InputValue value)

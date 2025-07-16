@@ -12,8 +12,8 @@ public class PlayerController : MonoBehaviour
     public bool IsInteracting;
     [SerializeField] private bool CanWalk = false;
     [SerializeField] private bool isOnGround = false;
-    [SerializeField] private bool isJumping = false;
-    [SerializeField] private bool isDoubleJump = false;
+    public bool isJumping = false;
+    public bool isDoubleJump = false;
     [SerializeField] private bool CanDoubleJump = false;
     [SerializeField] private float DoubleJumpDelay = 0.1f;
     [SerializeField] private Transform groundCheck;
@@ -47,14 +47,17 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {   
         MovePlayer();
-        IsInteracting = animatorManager.animator.GetBool("IsInteracting");
     }
     
     bool IsGrounded()
     {
         isOnGround = false;
         isOnGround = Physics.CheckSphere(groundCheck.position, detectionRange, groundLayer);
-
+        if (isOnGround)
+        {
+            isJumping = false;
+            animatorManager.animator.SetBool("IsDoubleJumping", false);
+        }
         return isOnGround;
     }
 
@@ -81,10 +84,10 @@ public class PlayerController : MonoBehaviour
         if (IsInteracting)
             return;
 
-        if (IsGrounded())
+     /*   if (IsGrounded())
         {
             isJumping = false;
-        }
+        }*/
 
 
         float sprintValue = 1;
@@ -132,13 +135,11 @@ public class PlayerController : MonoBehaviour
             }
             else if (!isDoubleJump && CanDoubleJump)
             {
-                DoJump(); 
+                DoDoubleJump(); 
                 CanDoubleJump = false;
             }
         }
     }
-
-    
 
     void InvokeCanDoubleJump()
     {
@@ -152,6 +153,16 @@ public class PlayerController : MonoBehaviour
         else SendRunJumpToAnimator();
     }
 
+    void DoDoubleJump()
+    {
+        rigidBody.AddForce(Vector3.up * jumpForce);     
+        SendDoubleJumpToAnimator();
+    }
+    void SendDoubleJumpToAnimator()
+    {
+        animatorManager.animator.SetBool("IsDoubleJumping", true);
+    //    animatorManager.PlayTargetAnimation("DoubleJump", false);
+    }
     void SendRunJumpToAnimator()
     {
         animatorManager.animator.SetBool("Jumping", true);

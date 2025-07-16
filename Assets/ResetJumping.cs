@@ -20,6 +20,11 @@ public class ResetJumping : StateMachineBehaviour
     override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
         animator.SetBool("Jumping", false);
+        animator.SetBool("IsDoubleJumping", false);
+
+        PlayerController playerController = animator.GetComponent<PlayerController>();
+        playerController.isJumping = false;
+        playerController.isDoubleJump = false;
     }
 
     // OnStateMove is called right after Animator.OnAnimatorMove()
